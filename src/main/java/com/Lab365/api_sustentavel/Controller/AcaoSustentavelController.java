@@ -21,8 +21,9 @@ public class AcaoSustentavelController {
     @Autowired
     private AcaoSustentavelRepository acaoRepository;
 
-    // Criar nova ação sustentável
+    //POST - Criar nova ação sustentável
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<AcaoSustentavelResponse> criar(@Valid @RequestBody AcaoSustentavelRequest request) {
         AcaoSustentavel acao = new AcaoSustentavel(
                 request.getTitulo(),
@@ -46,7 +47,7 @@ public class AcaoSustentavelController {
         return ResponseEntity.created(URI.create("/acoes/" + salva.getId())).body(response);
     }
 
-    // Listar todas as ações
+    // GET - Listar todas as ações
     @GetMapping
     public ResponseEntity<List<AcaoSustentavelResponse>> listar() {
         List<AcaoSustentavelResponse> resposta = acaoRepository.findAll().stream()
@@ -62,7 +63,7 @@ public class AcaoSustentavelController {
         return ResponseEntity.ok(resposta);
     }
 
-    // Buscar por ID
+    // GET - /acoes/{id} - Buscar por ID
     @GetMapping("/{id}")
     public ResponseEntity<AcaoSustentavelResponse> buscarPorId(@PathVariable Long id) {
         return acaoRepository.findById(id)
@@ -75,4 +76,45 @@ public class AcaoSustentavelController {
                         acao.getResponsavel())))
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    // ✅ PUT /acoes/{id} → Atualizar ação existente
+    @PutMapping("/{id}")
+    public ResponseEntity<AcaoSustentavelResponse> atualizar(@PathVariable Long id,
+                                                             @Valid @RequestBody AcaoSustentavelRequest request) {
+        return acaoRepository.findById(id)
+                .map(acaoExistente -> {
+                    // Atualiza os campos com os novos valores
+                    acaoExistente.setTitulo(request.getTitulo());
+                    acaoExistente.setDescricao(request.getDescricao());
+                    acaoExistente.setCategoria(request.getCategoria());
+                    acaoExistente.setDataRealizacao(request.getDataRealizacao());
+                    acaoExistente.setResponsavel(request.getResponsavel());
+
+                    AcaoSustentavel atualizada = acaoRepository.save(acaoExistente);
+
+                    AcaoSustentavelResponse response = new AcaoSustentavelResponse(
+                            atualizada.getId(),
+                            atualizada.getTitulo(),
+                            atualizada.getDescricao(),
+                            atualizada.getCategoria(),
+                            atualizada.getDataRealizacao(),
+                            atualizada.getResponsavel()
+                    );
+
+                    return ResponseEntity.ok(response);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // ✅ DELETE /acoes/{id} → Excluir ação
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> excluir(@PathVariable Long id) {
+        if (!acaoRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        acaoRepository.deleteById(id);
+        return ResponseEntity.noContent().build(); // 204 No Content
+    }
+
 }
