@@ -3,6 +3,7 @@ package com.Lab365.api_sustentavel.Controller;
 import com.Lab365.api_sustentavel.Dto.AcaoSustentavelRequest;
 import com.Lab365.api_sustentavel.Dto.AcaoSustentavelResponse;
 import com.Lab365.api_sustentavel.Entity.AcaoSustentavel;
+import com.Lab365.api_sustentavel.Exception.RecursoNaoEncontradoException;
 import com.Lab365.api_sustentavel.Repository.AcaoSustentavelRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,31 +67,39 @@ public class AcaoSustentavelController {
     // GET - /acoes/{id} - Buscar por ID
     @GetMapping("/{id}")
     public ResponseEntity<AcaoSustentavelResponse> buscarPorId(@PathVariable Long id) {
-        return acaoRepository.findById(id)
-                .map(acao -> ResponseEntity.ok(new AcaoSustentavelResponse(
-                        acao.getId(),
-                        acao.getTitulo(),
-                        acao.getDescricao(),
-                        acao.getCategoria(),
-                        acao.getDataRealizacao(),
-                        acao.getResponsavel())))
-                .orElse(ResponseEntity.notFound().build());
+        AcaoSustentavel acao = acaoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        "Ação sustentavel com ID" + id + "não foi encontrada."
+                ));
+
+        AcaoSustentavelResponse response = new AcaoSustentavelResponse(
+                acao.getId(),
+                acao.getTitulo(),
+                acao.getDescricao(),
+                acao.getCategoria(),
+                acao.getDataRealizacao(),
+                acao.getResponsavel()
+        );
+
+        return ResponseEntity.ok(response);
     }
 
-    // ✅ PUT /acoes/{id} → Atualizar ação existente
+    //  PUT /acoes/{id} → Atualizar ação existente
     @PutMapping("/{id}")
     public ResponseEntity<AcaoSustentavelResponse> atualizar(@PathVariable Long id,
                                                              @Valid @RequestBody AcaoSustentavelRequest request) {
-        return acaoRepository.findById(id)
-                .map(acaoExistente -> {
-                    // Atualiza os campos com os novos valores
-                    acaoExistente.setTitulo(request.getTitulo());
-                    acaoExistente.setDescricao(request.getDescricao());
-                    acaoExistente.setCategoria(request.getCategoria());
-                    acaoExistente.setDataRealizacao(request.getDataRealizacao());
-                    acaoExistente.setResponsavel(request.getResponsavel());
+        AcaoSustentavel acao = acaoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException(
+                        "Impossível atualizar. Ação com ID" + id + "não encontrada."
+                ));
 
-                    AcaoSustentavel atualizada = acaoRepository.save(acaoExistente);
+                    acao.setTitulo(request.getTitulo());
+                    acao.setDescricao(request.getDescricao());
+                    acao.setCategoria(request.getCategoria());
+                    acao.setDataRealizacao(request.getDataRealizacao());
+                    acao.setResponsavel(request.getResponsavel());
+
+                    AcaoSustentavel atualizada = acaoRepository.save(acao);
 
                     AcaoSustentavelResponse response = new AcaoSustentavelResponse(
                             atualizada.getId(),
@@ -102,15 +111,14 @@ public class AcaoSustentavelController {
                     );
 
                     return ResponseEntity.ok(response);
-                })
-                .orElse(ResponseEntity.notFound().build());
+
     }
 
-    // ✅ DELETE /acoes/{id} → Excluir ação
+    //  DELETE /acoes/{id} → Excluir ação
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         if (!acaoRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
+            throw new RecursoNaoEncontradoException("Ação com ID" + id + "não pode ser excluída porque não existe.");
         }
 
         acaoRepository.deleteById(id);
