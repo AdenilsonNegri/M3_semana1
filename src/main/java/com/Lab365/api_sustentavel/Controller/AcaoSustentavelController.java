@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.Lab365.api_sustentavel.Enum.CategoriaAcao;
 
 import java.net.URI;
 import java.util.List;
@@ -125,4 +126,38 @@ public class AcaoSustentavelController {
         return ResponseEntity.noContent().build(); // 204 No Content
     }
 
+    // ✅ NOVO: GET /acoes/categoria?tipo=DOACAO
+    @GetMapping("/categoria")
+    public ResponseEntity<List<AcaoSustentavelResponse>> listarPorCategoria(
+            @RequestParam("tipo") String tipo) {
+
+        // 1. Validar se o valor do parâmetro é um enum válido
+        CategoriaAcao categoria;
+        try {
+            categoria = CategoriaAcao.valueOf(tipo.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RecursoNaoEncontradoException(
+                    "Categoria inválida: '" + tipo + "'. " +
+                            "Valores permitidos: DOACAO, RECICLAGEM, PLANTIO, EDUCACAO_AMBIENTAL, OUTROS"
+            );
+        }
+
+        // 2. Buscar no banco
+        List<AcaoSustentavel> acoes = acaoRepository.findByCategoria(categoria);
+
+        // 3. Converter para DTO
+        List<AcaoSustentavelResponse> resposta = acoes.stream()
+                .map(acao -> new AcaoSustentavelResponse(
+                        acao.getId(),
+                        acao.getTitulo(),
+                        acao.getDescricao(),
+                        acao.getCategoria(),
+                        acao.getDataRealizacao(),
+                        acao.getResponsavel()))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(resposta);
+    }
 }
+
+
